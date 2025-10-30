@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import {
   Wallet,
   Key,
@@ -79,6 +80,7 @@ export default function MicroPaymentWallet() {
   const [amount, setAmount] = useState("");
   const [otpInput, setOtpInput] = useState("");
   const [showSetupQR, setShowSetupQR] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -95,9 +97,23 @@ export default function MicroPaymentWallet() {
     }
   }, []);
 
-  const setupWallet = () => {
+  const setupWallet = async () => {
     const newSecret = generateSecret();
     setSecret(newSecret);
+    
+    // Generate Google Authenticator URI
+    const issuer = "SecureWallet";
+    const accountName = "user@wallet.com";
+    const otpAuthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${newSecret}&issuer=${encodeURIComponent(issuer)}`;
+    
+    // Generate QR code
+    try {
+      const qrUrl = await QRCode.toDataURL(otpAuthUrl);
+      setQrCodeUrl(qrUrl);
+    } catch (err) {
+      console.error('Error generating QR code:', err);
+    }
+    
     setShowSetupQR(true);
   };
 
@@ -220,6 +236,16 @@ export default function MicroPaymentWallet() {
           </div>
 
           <div className="bg-gray-50 p-6 rounded-xl mb-6">
+            {qrCodeUrl && (
+              <div className="bg-white p-4 rounded-lg mb-4 text-center">
+                <img 
+                  src={qrCodeUrl} 
+                  alt="QR Code for Google Authenticator" 
+                  className="mx-auto mb-2"
+                  style={{ maxWidth: '200px', height: 'auto' }}
+                />
+              </div>
+            )}
             <div className="bg-white p-4 rounded-lg mb-4 text-center">
               <p className="text-xs text-gray-500 mb-2">Manual Entry Code:</p>
               <p className="text-sm font-mono font-bold text-indigo-600 break-all">
@@ -227,7 +253,7 @@ export default function MicroPaymentWallet() {
               </p>
             </div>
             <p className="text-xs text-gray-600 text-center">
-              Or manually enter this code in Google Authenticator
+              Scan the QR code or manually enter the code in Google Authenticator
             </p>
           </div>
 
